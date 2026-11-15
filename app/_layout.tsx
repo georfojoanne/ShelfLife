@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { initializeDatabase } from '@/database/database';
+import { configureNotificationsAsync, reconcileExpirationReminders } from '@/notifications/service';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -35,6 +37,17 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    initializeDatabase()
+      .then(() => configureNotificationsAsync())
+      .then(() => reconcileExpirationReminders())
+      .catch((error) => {
+        const details = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error), stack: undefined };
+        console.error('[ShelfLife] startup notification reconciliation failed', details, error);
+        // Individual screens surface database errors with actionable retry states.
+      });
+  }, []);
+
   if (!loaded) {
     return null;
   }
@@ -49,6 +62,8 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="item/new" options={{ headerShown: false }} />
+        <Stack.Screen name="item/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>
